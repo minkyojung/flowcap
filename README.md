@@ -1,152 +1,116 @@
-# Hi, this is Clicky.
-It's an AI teacher that lives as a buddy next to your cursor. It can see your screen, talk to you, and even point at stuff. Kinda like having a real teacher next to you.
+# Flowcap
 
-Download it [here](https://www.clicky.so/) for free.
+화면을 녹화하면 AI가 자동으로 워크플로우 문서를 만들어주는 macOS 앱.
 
-Here's the [original tweet](https://x.com/FarzaTV/status/2041314633978659092) that kinda blew up for a demo for more context.
+반복 업무를 할 때 Ctrl+Option+R을 누르고 평소처럼 작업하면, Flowcap이 스크린샷을 자동 캡처하고 AI(Gemini 2.5 Flash)가 단계별 SOP 문서를 생성합니다.
 
-![Clicky — an ai buddy that lives on your mac](clicky-demo.gif)
+<!-- 데모 영상을 추가하려면 아래 주석을 해제하세요 -->
+<!-- ![Flowcap Demo](demo.gif) -->
 
-This is the open-source version of Clicky for those that want to hack on it, build their own features, or just see how it works under the hood.
+## 지원 포맷
 
-## Get started with Claude Code
+| 포맷 | 설명 |
+|------|------|
+| **Markdown** | 사람이 읽는 단계별 SOP 문서 |
+| **Python** | pyautogui 기반 데스크탑 자동화 스크립트 |
+| **JSON** | n8n, Make, Zapier 등 자동화 도구용 |
+| **AppleScript** | macOS 네이티브 자동화 |
+| **Playwright** | 브라우저 자동화 테스트 스크립트 (TypeScript) |
+| **Shortcuts** | Apple Shortcuts 앱에서 재현 가능한 레시피 |
 
-The fastest way to get this running is with [Claude Code](https://docs.anthropic.com/en/docs/claude-code).
+## 사용법
 
-Once you get Claude running, paste this:
+1. 메뉴바 아이콘을 클릭해서 패널을 엽니다
+2. **Ctrl+Option+R** 을 누르면 녹화가 시작됩니다 (4초 간격으로 스크린샷 캡처)
+3. 평소처럼 작업을 수행합니다
+4. 다시 **Ctrl+Option+R** 을 누르면 녹화가 종료되고 AI가 워크플로우를 생성합니다
+5. 패널에서 포맷을 선택하고, 결과를 복사하거나 다른 포맷으로 재생성할 수 있습니다
 
-```
-Hi Claude.
+## 셋업
 
-Clone https://github.com/farzaa/clicky.git into my current directory.
+### 준비물
 
-Then read the CLAUDE.md. I want to get Clicky running locally on my Mac.
-
-Help me set up everything — the Cloudflare Worker with my own API keys, the proxy URLs, and getting it building in Xcode. Walk me through it.
-```
-
-That's it. It'll clone the repo, read the docs, and walk you through the whole setup. Once you're running you can just keep talking to it — build features, fix bugs, whatever. Go crazy.
-
-## Manual setup
-
-If you want to do it yourself, here's the deal.
-
-### Prerequisites
-
-- macOS 14.2+ (for ScreenCaptureKit)
+- macOS 14.2+ (ScreenCaptureKit 필요)
 - Xcode 15+
-- Node.js 18+ (for the Cloudflare Worker)
-- A [Cloudflare](https://cloudflare.com) account (free tier works)
-- API keys for: [Anthropic](https://console.anthropic.com), [AssemblyAI](https://www.assemblyai.com), [ElevenLabs](https://elevenlabs.io)
+- Node.js 18+ (Cloudflare Worker용)
+- [Cloudflare](https://cloudflare.com) 계정 (무료)
+- [Google AI Studio](https://aistudio.google.com) API 키 (Gemini)
 
-### 1. Set up the Cloudflare Worker
+> Clicky의 원래 기능(음성 대화, 커서 포인팅)도 사용하려면 [Anthropic](https://console.anthropic.com), [AssemblyAI](https://www.assemblyai.com), [ElevenLabs](https://elevenlabs.io) API 키도 필요합니다.
 
-The Worker is a tiny proxy that holds your API keys. The app talks to the Worker, the Worker talks to the APIs. This way your keys never ship in the app binary.
+### 1. Cloudflare Worker 설정
+
+Worker는 API 키를 안전하게 보관하는 프록시입니다. 앱은 Worker를 통해 API를 호출하므로, 앱 바이너리에 키가 포함되지 않습니다.
 
 ```bash
 cd worker
 npm install
 ```
 
-Now add your secrets. Wrangler will prompt you to paste each one:
+API 키를 시크릿으로 등록합니다:
 
 ```bash
+# Flowcap 워크플로우 생성에 필요 (필수)
+npx wrangler secret put GEMINI_API_KEY
+
+# Clicky 원래 기능용 (선택)
 npx wrangler secret put ANTHROPIC_API_KEY
 npx wrangler secret put ASSEMBLYAI_API_KEY
 npx wrangler secret put ELEVENLABS_API_KEY
 ```
 
-For the ElevenLabs voice ID, open `wrangler.toml` and set it there (it's not sensitive):
-
-```toml
-[vars]
-ELEVENLABS_VOICE_ID = "your-voice-id-here"
-```
-
-Deploy it:
+배포합니다:
 
 ```bash
 npx wrangler deploy
 ```
 
-It'll give you a URL like `https://your-worker-name.your-subdomain.workers.dev`. Copy that.
+배포 후 나오는 URL (예: `https://your-worker.your-subdomain.workers.dev`)을 복사합니다.
 
-### 2. Run the Worker locally (for development)
+### 2. Worker URL 설정
 
-If you want to test changes to the Worker without deploying:
-
-```bash
-cd worker
-npx wrangler dev
-```
-
-This starts a local server (usually `http://localhost:8787`) that behaves exactly like the deployed Worker. You'll need to create a `.dev.vars` file in the `worker/` directory with your keys:
-
-```
-ANTHROPIC_API_KEY=sk-ant-...
-ASSEMBLYAI_API_KEY=...
-ELEVENLABS_API_KEY=...
-ELEVENLABS_VOICE_ID=...
-```
-
-Then update the proxy URLs in the Swift code to point to `http://localhost:8787` instead of the deployed Worker URL while developing. Grep for `clicky-proxy` to find them all.
-
-### 3. Update the proxy URLs in the app
-
-The app has the Worker URL hardcoded in a few places. Search for `your-worker-name.your-subdomain.workers.dev` and replace it with your Worker URL:
+앱에 Worker URL이 하드코딩되어 있습니다. 본인의 Worker URL로 교체합니다:
 
 ```bash
 grep -r "clicky-proxy" leanring-buddy/
 ```
 
-You'll find it in:
-- `CompanionManager.swift` — Claude chat + ElevenLabs TTS
-- `AssemblyAIStreamingTranscriptionProvider.swift` — AssemblyAI token endpoint
+`CompanionManager.swift`와 `AssemblyAIStreamingTranscriptionProvider.swift`에서 URL을 교체합니다.
 
-### 4. Open in Xcode and run
+### 3. Xcode에서 빌드
 
 ```bash
 open leanring-buddy.xcodeproj
 ```
 
-In Xcode:
-1. Select the `leanring-buddy` scheme (yes, the typo is intentional, long story)
-2. Set your signing team under Signing & Capabilities
-3. Hit **Cmd + R** to build and run
+Xcode에서:
+1. `leanring-buddy` 스킴을 선택합니다 (이름의 오타는 의도적입니다)
+2. Signing & Capabilities에서 팀을 설정합니다
+3. **Cmd+R** 로 빌드 및 실행합니다
 
-The app will appear in your menu bar (not the dock). Click the icon to open the panel, grant the permissions it asks for, and you're good.
+앱은 메뉴바에 나타납니다 (Dock에는 표시되지 않음).
 
-### Permissions the app needs
+> **주의**: 터미널에서 `xcodebuild`를 실행하지 마세요. TCC 권한이 초기화되어 화면 녹화, 접근성 등의 권한을 다시 요청해야 합니다.
 
-- **Microphone** — for push-to-talk voice capture
-- **Accessibility** — for the global keyboard shortcut (Control + Option)
-- **Screen Recording** — for taking screenshots when you use the hotkey
-- **Screen Content** — for ScreenCaptureKit access
+### 필요한 권한
 
-## Architecture
+- **마이크** — 음성 입력용 (Flowcap 워크플로우 기능에는 불필요)
+- **접근성** — 전역 단축키 감지 (Ctrl+Option+R)
+- **화면 녹화** — 스크린샷 캡처
+- **화면 콘텐츠** — ScreenCaptureKit 접근
 
-If you want the full technical breakdown, read `CLAUDE.md`. But here's the short version:
+## 기술 스택
 
-**Menu bar app** (no dock icon) with two `NSPanel` windows — one for the control panel dropdown, one for the full-screen transparent cursor overlay. Push-to-talk streams audio over a websocket to AssemblyAI, sends the transcript + screenshot to Claude via streaming SSE, and plays the response through ElevenLabs TTS. Claude can embed `[POINT:x,y:label:screenN]` tags in its responses to make the cursor fly to specific UI elements across multiple monitors. All three APIs are proxied through a Cloudflare Worker.
+- **SwiftUI + AppKit** — macOS 네이티브 메뉴바 앱
+- **Gemini 2.5 Flash** — 1M+ 토큰 컨텍스트로 대량 스크린샷 분석
+- **ScreenCaptureKit** — 멀티 모니터 스크린샷 캡처
+- **Cloudflare Worker** — API 키 프록시
+- **SSE Streaming** — 실시간 텍스트 생성
 
-## Project structure
+## 기여
 
-```
-leanring-buddy/          # Swift source (yes, the typo stays)
-  CompanionManager.swift    # Central state machine
-  CompanionPanelView.swift  # Menu bar panel UI
-  ClaudeAPI.swift           # Claude streaming client
-  ElevenLabsTTSClient.swift # Text-to-speech playback
-  OverlayWindow.swift       # Blue cursor overlay
-  AssemblyAI*.swift         # Real-time transcription
-  BuddyDictation*.swift     # Push-to-talk pipeline
-worker/                  # Cloudflare Worker proxy
-  src/index.ts              # Three routes: /chat, /tts, /transcribe-token
-CLAUDE.md                # Full architecture doc (agents read this)
-```
+PR 환영합니다. 프로젝트 구조와 코드 컨벤션은 `CLAUDE.md`를 참고하세요.
 
-## Contributing
+## 크레딧
 
-PRs welcome. If you're using Claude Code, it already knows the codebase — just tell it what you want to build and point it at `CLAUDE.md`.
-
-Got feedback? DM me on X [@farzatv](https://x.com/farzatv).
+[Clicky](https://github.com/farzaa/clicky) by [Farza](https://x.com/farzatv) 위에 만들어졌습니다. MIT 라이선스.
