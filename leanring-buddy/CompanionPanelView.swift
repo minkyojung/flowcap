@@ -13,6 +13,7 @@ import SwiftUI
 struct CompanionPanelView: View {
     @ObservedObject var companionManager: CompanionManager
     @State private var emailInput: String = ""
+    @State private var workflowCopiedToClipboard = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -30,6 +31,16 @@ struct CompanionPanelView: View {
                     .frame(height: 12)
 
                 workflowRecordingIndicator
+                    .padding(.horizontal, 16)
+            }
+
+            if companionManager.workflowGenerator.isGenerating
+                || !companionManager.workflowGenerator.generatedWorkflowText.isEmpty
+                || companionManager.workflowGenerator.generationError != nil {
+                Spacer()
+                    .frame(height: 12)
+
+                workflowResultSection
                     .padding(.horizontal, 16)
             }
 
@@ -731,6 +742,155 @@ struct CompanionPanelView: View {
             .fill(DS.Colors.background)
             .shadow(color: Color.black.opacity(0.5), radius: 20, x: 0, y: 10)
             .shadow(color: Color.black.opacity(0.3), radius: 4, x: 0, y: 2)
+    }
+
+    // MARK: - Workflow Result
+
+    private var workflowResultSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            // Header with format picker
+            HStack {
+                if companionManager.workflowGenerator.isGenerating {
+                    ProgressView()
+                        .controlSize(.small)
+                        .scaleEffect(0.7)
+
+                    Text("Generating workflow...")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(DS.Colors.textSecondary)
+                } else if companionManager.workflowGenerator.generationError != nil {
+                    Text("Generation Failed")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(Color.red)
+                } else {
+                    Text("Workflow Ready")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(DS.Colors.textPrimary)
+                }
+
+                Spacer()
+
+                // Format picker — disabled during generation to avoid confusion
+                Picker("", selection: Binding(
+                    get: { companionManager.workflowGenerator.selectedFormat },
+                    set: { companionManager.workflowGenerator.setSelectedFormat($0) }
+                )) {
+                    ForEach(WorkflowOutputFormat.allCases, id: \.self) { format in
+                        Text(format.rawValue).tag(format)
+                    }
+                }
+                .pickerStyle(.menu)
+                .frame(width: 110)
+                .disabled(companionManager.workflowGenerator.isGenerating)
+            }
+
+            if let generationError = companionManager.workflowGenerator.generationError {
+                // Error state
+                Text(generationError)
+                    .font(.system(size: 11))
+                    .foregroundColor(Color.red.opacity(0.8))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            } else {
+                // Scrollable result text
+                ScrollView {
+                    Text(companionManager.workflowGenerator.generatedWorkflowText)
+                        .font(.system(size: 11, design: .monospaced))
+                        .foregroundColor(DS.Colors.textSecondary)
+                        .textSelection(.enabled)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .frame(maxHeight: 200)
+            }
+
+            // Action buttons
+            HStack(spacing: 8) {
+                Button(action: {
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.setString(
+                        companionManager.workflowGenerator.generatedWorkflowText,
+                        forType: .string
+                    )
+                    workflowCopiedToClipboard = true
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                        workflowCopiedToClipboard = false
+                    }
+                }) {
+                    HStack(spacing: 4) {
+                        Image(systemName: workflowCopiedToClipboard ? "checkmark" : "doc.on.doc")
+                            .font(.system(size: 10))
+                        Text(workflowCopiedToClipboard ? "Copied" : "Copy")
+                            .font(.system(size: 11, weight: .medium))
+                    }
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(
+                        RoundedRectangle(cornerRadius: DS.CornerRadius.small)
+                            .fill(DS.Colors.blue400.opacity(0.8))
+                    )
+                }
+                .buttonStyle(.plain)
+                .pointerCursor()
+                .disabled(
+                    companionManager.workflowGenerator.generatedWorkflowText.isEmpty
+                    || companionManager.workflowGenerator.generationError != nil
+                )
+
+                if !companionManager.workflowGenerator.isGenerating
+                    && !companionManager.workflowRecordingSession.capturedFrames.isEmpty {
+                    Button(action: {
+                        companionManager.workflowGenerator.generateWorkflow(
+                            from: companionManager.workflowRecordingSession.capturedFrames,
+                            using: companionManager.claudeAPIForWorkflow
+                        )
+                    }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "arrow.clockwise")
+                                .font(.system(size: 10))
+                            Text("Regenerate")
+                                .font(.system(size: 11, weight: .medium))
+                        }
+                        .foregroundColor(DS.Colors.textSecondary)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(
+                            RoundedRectangle(cornerRadius: DS.CornerRadius.small)
+                                .fill(Color.white.opacity(0.08))
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    .pointerCursor()
+                }
+
+                Spacer()
+
+                // Dismiss result
+                Button(action: {
+                    companionManager.workflowGenerator.cancelGeneration()
+                    companionManager.workflowGenerator.clearResult()
+                }) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundColor(DS.Colors.textTertiary)
+                        .frame(width: 20, height: 20)
+                        .background(
+                            Circle()
+                                .fill(Color.white.opacity(0.08))
+                        )
+                }
+                .buttonStyle(.plain)
+                .pointerCursor()
+            }
+        }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: DS.CornerRadius.medium)
+                .fill(Color.white.opacity(0.04))
+                .overlay(
+                    RoundedRectangle(cornerRadius: DS.CornerRadius.medium)
+                        .stroke(DS.Colors.borderSubtle, lineWidth: 1)
+                )
+        )
     }
 
     // MARK: - Workflow Recording Indicator

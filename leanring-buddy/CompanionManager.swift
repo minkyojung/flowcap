@@ -68,9 +68,10 @@ final class CompanionManager: ObservableObject {
     // Response text is now displayed inline on the cursor overlay via
     // streamingResponseText, so no separate response overlay manager is needed.
 
-    // MARK: - Workflow Recording
+    // MARK: - Workflow Recording & Generation
 
     let workflowRecordingSession = WorkflowRecordingSession()
+    let workflowGenerator = WorkflowGenerator()
 
     /// Base URL for the Cloudflare Worker proxy. All API requests route
     /// through this so keys never ship in the app binary.
@@ -79,6 +80,10 @@ final class CompanionManager: ObservableObject {
     private lazy var claudeAPI: ClaudeAPI = {
         return ClaudeAPI(proxyURL: "\(Self.workerBaseURL)/chat", model: selectedModel)
     }()
+
+    /// Public accessor for the Claude API instance, used by the workflow
+    /// result panel's regenerate button.
+    var claudeAPIForWorkflow: ClaudeAPI { claudeAPI }
 
     private lazy var elevenLabsTTSClient: ElevenLabsTTSClient = {
         return ElevenLabsTTSClient(proxyURL: "\(Self.workerBaseURL)/tts")
@@ -311,6 +316,7 @@ final class CompanionManager: ObservableObject {
         if workflowRecordingSession.isRecording {
             workflowRecordingSession.stopRecording()
         }
+        workflowGenerator.cancelGeneration()
     }
 
     func refreshAllPermissions() {
@@ -493,12 +499,15 @@ final class CompanionManager: ObservableObject {
     func toggleWorkflowRecording() {
         if workflowRecordingSession.isRecording {
             workflowRecordingSession.stopRecording()
-            // Phase 2 will process capturedFrames here
+            let capturedFrames = workflowRecordingSession.capturedFrames
+            workflowGenerator.generateWorkflow(from: capturedFrames, using: claudeAPI)
         } else {
             guard hasScreenRecordingPermission else {
                 print("⚠️ Workflow recording requires screen recording permission")
                 return
             }
+            // Cancel any in-progress generation from a previous recording
+            workflowGenerator.cancelGeneration()
             workflowRecordingSession.startRecording()
         }
     }
