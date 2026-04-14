@@ -183,6 +183,9 @@ final class CompanionManager: ObservableObject {
     }
 
     func start() {
+        // Skip onboarding for development — remove this line for production
+        hasCompletedOnboarding = true
+
         refreshAllPermissions()
         print("🔑 Clicky start — accessibility: \(hasAccessibilityPermission), screen: \(hasScreenRecordingPermission), mic: \(hasMicrophonePermission), screenContent: \(hasScreenContentPermission), onboarded: \(hasCompletedOnboarding)")
         startPermissionPolling()

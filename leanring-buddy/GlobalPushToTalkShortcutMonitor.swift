@@ -28,9 +28,9 @@ final class GlobalPushToTalkShortcutMonitor: ObservableObject {
     /// waiting for the async dictation state pipeline to catch up.
     @Published private(set) var isShortcutCurrentlyPressed = false
 
-    // Cmd+Shift+R key code (R = 15 on macOS virtual key table)
+    // Ctrl+Option+R key code (R = 15 on macOS virtual key table)
     private static let workflowRecordingKeyCode: UInt16 = 15
-    private static let workflowRecordingModifierFlags: NSEvent.ModifierFlags = [.command, .shift]
+    private static let workflowRecordingModifierFlags: NSEvent.ModifierFlags = [.control, .option]
 
     deinit {
         stop()
