@@ -68,6 +68,10 @@ final class CompanionManager: ObservableObject {
     // Response text is now displayed inline on the cursor overlay via
     // streamingResponseText, so no separate response overlay manager is needed.
 
+    // MARK: - Workflow Recording
+
+    let workflowRecordingSession = WorkflowRecordingSession()
+
     /// Base URL for the Cloudflare Worker proxy. All API requests route
     /// through this so keys never ship in the app binary.
     private static let workerBaseURL = "https://your-worker-name.your-subdomain.workers.dev"
@@ -89,6 +93,7 @@ final class CompanionManager: ObservableObject {
     private var currentResponseTask: Task<Void, Never>?
 
     private var shortcutTransitionCancellable: AnyCancellable?
+    private var workflowRecordingToggleCancellable: AnyCancellable?
     private var voiceStateCancellable: AnyCancellable?
     private var audioPowerCancellable: AnyCancellable?
     private var accessibilityCheckTimer: Timer?
@@ -179,6 +184,7 @@ final class CompanionManager: ObservableObject {
         bindVoiceStateObservation()
         bindAudioPowerLevel()
         bindShortcutTransitions()
+        bindWorkflowRecordingToggle()
         // Eagerly touch the Claude API so its TLS warmup handshake completes
         // well before the onboarding demo fires at ~40s into the video.
         _ = claudeAPI
@@ -296,10 +302,15 @@ final class CompanionManager: ObservableObject {
         currentResponseTask?.cancel()
         currentResponseTask = nil
         shortcutTransitionCancellable?.cancel()
+        workflowRecordingToggleCancellable?.cancel()
         voiceStateCancellable?.cancel()
         audioPowerCancellable?.cancel()
         accessibilityCheckTimer?.invalidate()
         accessibilityCheckTimer = nil
+
+        if workflowRecordingSession.isRecording {
+            workflowRecordingSession.stopRecording()
+        }
     }
 
     func refreshAllPermissions() {
@@ -468,6 +479,28 @@ final class CompanionManager: ObservableObject {
             .sink { [weak self] transition in
                 self?.handleShortcutTransition(transition)
             }
+    }
+
+    private func bindWorkflowRecordingToggle() {
+        workflowRecordingToggleCancellable = globalPushToTalkShortcutMonitor
+            .workflowRecordingTogglePublisher
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] in
+                self?.toggleWorkflowRecording()
+            }
+    }
+
+    func toggleWorkflowRecording() {
+        if workflowRecordingSession.isRecording {
+            workflowRecordingSession.stopRecording()
+            // Phase 2 will process capturedFrames here
+        } else {
+            guard hasScreenRecordingPermission else {
+                print("⚠️ Workflow recording requires screen recording permission")
+                return
+            }
+            workflowRecordingSession.startRecording()
+        }
     }
 
     private func handleShortcutTransition(_ transition: BuddyPushToTalkShortcut.ShortcutTransition) {

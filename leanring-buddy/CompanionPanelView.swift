@@ -25,6 +25,14 @@ struct CompanionPanelView: View {
                 .padding(.top, 16)
                 .padding(.horizontal, 16)
 
+            if companionManager.workflowRecordingSession.isRecording {
+                Spacer()
+                    .frame(height: 12)
+
+                workflowRecordingIndicator
+                    .padding(.horizontal, 16)
+            }
+
             if companionManager.hasCompletedOnboarding && companionManager.allPermissionsGranted {
                 Spacer()
                     .frame(height: 12)
@@ -725,7 +733,56 @@ struct CompanionPanelView: View {
             .shadow(color: Color.black.opacity(0.3), radius: 4, x: 0, y: 2)
     }
 
+    // MARK: - Workflow Recording Indicator
+
+    private var workflowRecordingIndicator: some View {
+        HStack(spacing: 10) {
+            Circle()
+                .fill(Color.red)
+                .frame(width: 8, height: 8)
+                .shadow(color: Color.red.opacity(0.6), radius: 4)
+
+            Text("Recording workflow...")
+                .font(.system(size: 12, weight: .medium))
+                .foregroundColor(DS.Colors.textSecondary)
+
+            Spacer()
+
+            Text("\(companionManager.workflowRecordingSession.capturedFrames.count) frames")
+                .font(.system(size: 11, weight: .medium))
+                .foregroundColor(DS.Colors.textTertiary)
+
+            Button(action: {
+                companionManager.toggleWorkflowRecording()
+            }) {
+                Text("Stop")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(
+                        RoundedRectangle(cornerRadius: DS.CornerRadius.small)
+                            .fill(Color.red.opacity(0.8))
+                    )
+            }
+            .buttonStyle(.plain)
+            .pointerCursor()
+        }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: DS.CornerRadius.medium)
+                .fill(Color.red.opacity(0.08))
+                .overlay(
+                    RoundedRectangle(cornerRadius: DS.CornerRadius.medium)
+                        .stroke(Color.red.opacity(0.2), lineWidth: 1)
+                )
+        )
+    }
+
     private var statusDotColor: Color {
+        if companionManager.workflowRecordingSession.isRecording {
+            return Color.red
+        }
         if !companionManager.isOverlayVisible {
             return DS.Colors.textTertiary
         }
@@ -740,6 +797,9 @@ struct CompanionPanelView: View {
     }
 
     private var statusText: String {
+        if companionManager.workflowRecordingSession.isRecording {
+            return "Recording"
+        }
         if !companionManager.hasCompletedOnboarding || !companionManager.allPermissionsGranted {
             return "Setup"
         }
