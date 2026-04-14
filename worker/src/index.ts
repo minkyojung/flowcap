@@ -114,7 +114,7 @@ async function handleTranscribeToken(env: Env): Promise<Response> {
 async function handleWorkflow(request: Request, env: Env): Promise<Response> {
   const body = await request.text();
 
-  const model = "gemini-2.5-flash-preview-04-17";
+  const model = "gemini-2.5-flash";
   const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse&key=${env.GEMINI_API_KEY}`;
 
   const response = await fetch(apiUrl, {
