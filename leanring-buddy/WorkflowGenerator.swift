@@ -3,9 +3,9 @@
 //  leanring-buddy
 //
 //  Takes captured screenshot frames from a WorkflowRecordingSession and
-//  sends them to Claude Vision to generate a step-by-step workflow document.
-//  Handles frame sampling (Claude has image count limits) and prompt
-//  construction for different output formats.
+//  sends them to Gemini 2.5 Flash to generate a step-by-step workflow
+//  document. Gemini's 1M+ token context window allows sending far more
+//  screenshots than other models, improving workflow accuracy.
 //
 
 import Combine
@@ -25,9 +25,9 @@ final class WorkflowGenerator: ObservableObject {
     @Published private(set) var generationError: String?
     @Published private(set) var selectedFormat: WorkflowOutputFormat = .markdown
 
-    /// Claude Vision supports up to 20 images per request. We leave room
-    /// for the text content blocks by capping at 18 screenshot frames.
-    private static let maximumFramesPerRequest = 18
+    /// Gemini supports a massive context window, but we still cap frames
+    /// to keep payload size reasonable (~500KB per JPEG × 50 = ~25MB).
+    private static let maximumFramesPerRequest = 50
 
     private var generationTask: Task<Void, Never>?
 
@@ -37,7 +37,7 @@ final class WorkflowGenerator: ObservableObject {
 
     func generateWorkflow(
         from capturedFrames: [WorkflowScreenshotFrame],
-        using claudeAPI: ClaudeAPI
+        using geminiAPI: GeminiWorkflowAPI
     ) {
         guard !capturedFrames.isEmpty else {
             print("⚠️ WorkflowGenerator: no frames to process")
@@ -69,11 +69,11 @@ final class WorkflowGenerator: ObservableObject {
                     sampledFrameCount: sampledFrames.count
                 )
 
-                let (fullText, duration) = try await claudeAPI.analyzeImageStreaming(
+                let (fullText, duration) = try await geminiAPI.generateWorkflowStreaming(
                     images: labeledImages,
                     systemPrompt: systemPrompt,
                     userPrompt: userPrompt,
-                    maxTokens: 4096,
+                    maxTokens: 8192,
                     onTextChunk: { [weak self] accumulatedText in
                         self?.generatedWorkflowText = accumulatedText
                     }

@@ -81,9 +81,9 @@ final class CompanionManager: ObservableObject {
         return ClaudeAPI(proxyURL: "\(Self.workerBaseURL)/chat", model: selectedModel)
     }()
 
-    /// Public accessor for the Claude API instance, used by the workflow
-    /// result panel's regenerate button.
-    var claudeAPIForWorkflow: ClaudeAPI { claudeAPI }
+    private(set) lazy var geminiWorkflowAPI: GeminiWorkflowAPI = {
+        return GeminiWorkflowAPI(proxyURL: "\(Self.workerBaseURL)/workflow")
+    }()
 
     private lazy var elevenLabsTTSClient: ElevenLabsTTSClient = {
         return ElevenLabsTTSClient(proxyURL: "\(Self.workerBaseURL)/tts")
@@ -503,7 +503,7 @@ final class CompanionManager: ObservableObject {
         if workflowRecordingSession.isRecording {
             workflowRecordingSession.stopRecording()
             let capturedFrames = workflowRecordingSession.capturedFrames
-            workflowGenerator.generateWorkflow(from: capturedFrames, using: claudeAPI)
+            workflowGenerator.generateWorkflow(from: capturedFrames, using: geminiWorkflowAPI)
         } else {
             guard hasScreenRecordingPermission else {
                 print("⚠️ Workflow recording requires screen recording permission")

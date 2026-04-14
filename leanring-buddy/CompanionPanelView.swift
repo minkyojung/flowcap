@@ -841,7 +841,7 @@ struct CompanionPanelView: View {
                     Button(action: {
                         companionManager.workflowGenerator.generateWorkflow(
                             from: companionManager.workflowRecordingSession.capturedFrames,
-                            using: companionManager.claudeAPIForWorkflow
+                            using: companionManager.geminiWorkflowAPI
                         )
                     }) {
                         HStack(spacing: 4) {
