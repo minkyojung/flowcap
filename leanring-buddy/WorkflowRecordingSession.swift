@@ -25,8 +25,13 @@ final class WorkflowRecordingSession: ObservableObject {
     @Published private(set) var capturedFrames: [WorkflowScreenshotFrame] = []
     @Published private(set) var recordingDuration: TimeInterval = 0
 
+    /// Live elapsed time updated every second while recording, for the
+    /// overlay stopwatch display.
+    @Published private(set) var elapsedTimeInSeconds: Int = 0
+
     private var recordingStartDate: Date?
     private var screenshotCaptureTimer: Timer?
+    private var elapsedTimeDisplayTimer: Timer?
 
     /// How often to capture a screenshot (seconds).
     private let screenshotIntervalInSeconds: TimeInterval = 4
@@ -40,6 +45,7 @@ final class WorkflowRecordingSession: ObservableObject {
         capturedFrames = []
         recordingStartDate = Date()
         recordingDuration = 0
+        elapsedTimeInSeconds = 0
         isRecording = true
 
         // Capture the first frame immediately
@@ -55,6 +61,17 @@ final class WorkflowRecordingSession: ObservableObject {
             }
         }
 
+        // Update the live elapsed time counter every second for the overlay stopwatch
+        elapsedTimeDisplayTimer = Timer.scheduledTimer(
+            withTimeInterval: 1.0,
+            repeats: true
+        ) { [weak self] _ in
+            Task { @MainActor in
+                guard let self, let startDate = self.recordingStartDate else { return }
+                self.elapsedTimeInSeconds = Int(Date().timeIntervalSince(startDate))
+            }
+        }
+
         print("📹 Workflow recording started")
     }
 
@@ -63,6 +80,8 @@ final class WorkflowRecordingSession: ObservableObject {
 
         screenshotCaptureTimer?.invalidate()
         screenshotCaptureTimer = nil
+        elapsedTimeDisplayTimer?.invalidate()
+        elapsedTimeDisplayTimer = nil
         isRecording = false
 
         if let startDate = recordingStartDate {
