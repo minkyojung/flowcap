@@ -1,116 +1,116 @@
 # Flowcap
 
-화면을 녹화하면 AI가 자동으로 워크플로우 문서를 만들어주는 macOS 앱.
+A macOS menu bar app that records your screen and uses AI to generate workflow documentation automatically.
 
-반복 업무를 할 때 Ctrl+Option+R을 누르고 평소처럼 작업하면, Flowcap이 스크린샷을 자동 캡처하고 AI(Gemini 2.5 Flash)가 단계별 SOP 문서를 생성합니다.
+Press Ctrl+Option+R, do your work as usual, and Flowcap captures screenshots every 4 seconds. When you stop, Gemini 2.5 Flash analyzes the sequence and generates a step-by-step workflow document.
 
-<!-- 데모 영상을 추가하려면 아래 주석을 해제하세요 -->
+<!-- Add your demo video here by dragging it into the GitHub editor -->
 <!-- ![Flowcap Demo](demo.gif) -->
 
-## 지원 포맷
+## Output Formats
 
-| 포맷 | 설명 |
-|------|------|
-| **Markdown** | 사람이 읽는 단계별 SOP 문서 |
-| **Python** | pyautogui 기반 데스크탑 자동화 스크립트 |
-| **JSON** | n8n, Make, Zapier 등 자동화 도구용 |
-| **AppleScript** | macOS 네이티브 자동화 |
-| **Playwright** | 브라우저 자동화 테스트 스크립트 (TypeScript) |
-| **Shortcuts** | Apple Shortcuts 앱에서 재현 가능한 레시피 |
+| Format | Description |
+|--------|-------------|
+| **Markdown** | Human-readable step-by-step SOP document |
+| **Python** | Desktop automation script using pyautogui |
+| **JSON** | Structured workflow for tools like n8n, Make, or Zapier |
+| **AppleScript** | Native macOS automation |
+| **Playwright** | Browser automation test script (TypeScript) |
+| **Shortcuts** | Recipe for the Apple Shortcuts app |
 
-## 사용법
+## How It Works
 
-1. 메뉴바 아이콘을 클릭해서 패널을 엽니다
-2. **Ctrl+Option+R** 을 누르면 녹화가 시작됩니다 (4초 간격으로 스크린샷 캡처)
-3. 평소처럼 작업을 수행합니다
-4. 다시 **Ctrl+Option+R** 을 누르면 녹화가 종료되고 AI가 워크플로우를 생성합니다
-5. 패널에서 포맷을 선택하고, 결과를 복사하거나 다른 포맷으로 재생성할 수 있습니다
+1. Click the menu bar icon to open the panel
+2. Press **Ctrl+Option+R** to start recording (captures a screenshot every 4 seconds)
+3. Do your work as usual
+4. Press **Ctrl+Option+R** again to stop — AI generates the workflow automatically
+5. Pick an output format, copy the result, or regenerate in a different format
 
-## 셋업
+## Setup
 
-### 준비물
+### Prerequisites
 
-- macOS 14.2+ (ScreenCaptureKit 필요)
+- macOS 14.2+ (requires ScreenCaptureKit)
 - Xcode 15+
-- Node.js 18+ (Cloudflare Worker용)
-- [Cloudflare](https://cloudflare.com) 계정 (무료)
-- [Google AI Studio](https://aistudio.google.com) API 키 (Gemini)
+- Node.js 18+ (for the Cloudflare Worker)
+- A [Cloudflare](https://cloudflare.com) account (free tier works)
+- A [Google AI Studio](https://aistudio.google.com) API key (for Gemini)
 
-> Clicky의 원래 기능(음성 대화, 커서 포인팅)도 사용하려면 [Anthropic](https://console.anthropic.com), [AssemblyAI](https://www.assemblyai.com), [ElevenLabs](https://elevenlabs.io) API 키도 필요합니다.
+> The app also includes Clicky's original features (voice chat, cursor pointing). To use those, you'll need API keys from [Anthropic](https://console.anthropic.com), [AssemblyAI](https://www.assemblyai.com), and [ElevenLabs](https://elevenlabs.io).
 
-### 1. Cloudflare Worker 설정
+### 1. Set Up the Cloudflare Worker
 
-Worker는 API 키를 안전하게 보관하는 프록시입니다. 앱은 Worker를 통해 API를 호출하므로, 앱 바이너리에 키가 포함되지 않습니다.
+The Worker is a proxy that keeps your API keys safe. The app calls the Worker, the Worker calls the APIs — so no keys ever ship in the app binary.
 
 ```bash
 cd worker
 npm install
 ```
 
-API 키를 시크릿으로 등록합니다:
+Add your API keys as secrets:
 
 ```bash
-# Flowcap 워크플로우 생성에 필요 (필수)
+# Required for Flowcap workflow generation
 npx wrangler secret put GEMINI_API_KEY
 
-# Clicky 원래 기능용 (선택)
+# Optional — for Clicky's original voice/chat features
 npx wrangler secret put ANTHROPIC_API_KEY
 npx wrangler secret put ASSEMBLYAI_API_KEY
 npx wrangler secret put ELEVENLABS_API_KEY
 ```
 
-배포합니다:
+Deploy:
 
 ```bash
 npx wrangler deploy
 ```
 
-배포 후 나오는 URL (예: `https://your-worker.your-subdomain.workers.dev`)을 복사합니다.
+Copy the URL it gives you (e.g. `https://your-worker.your-subdomain.workers.dev`).
 
-### 2. Worker URL 설정
+### 2. Update the Proxy URL
 
-앱에 Worker URL이 하드코딩되어 있습니다. 본인의 Worker URL로 교체합니다:
+The app has the Worker URL hardcoded. Replace it with your own:
 
 ```bash
 grep -r "clicky-proxy" leanring-buddy/
 ```
 
-`CompanionManager.swift`와 `AssemblyAIStreamingTranscriptionProvider.swift`에서 URL을 교체합니다.
+You'll find it in `CompanionManager.swift` and `AssemblyAIStreamingTranscriptionProvider.swift`.
 
-### 3. Xcode에서 빌드
+### 3. Build in Xcode
 
 ```bash
 open leanring-buddy.xcodeproj
 ```
 
-Xcode에서:
-1. `leanring-buddy` 스킴을 선택합니다 (이름의 오타는 의도적입니다)
-2. Signing & Capabilities에서 팀을 설정합니다
-3. **Cmd+R** 로 빌드 및 실행합니다
+In Xcode:
+1. Select the `leanring-buddy` scheme (the typo is intentional — legacy name)
+2. Set your signing team under Signing & Capabilities
+3. Hit **Cmd+R** to build and run
 
-앱은 메뉴바에 나타납니다 (Dock에는 표시되지 않음).
+The app appears in the menu bar (not the Dock).
 
-> **주의**: 터미널에서 `xcodebuild`를 실행하지 마세요. TCC 권한이 초기화되어 화면 녹화, 접근성 등의 권한을 다시 요청해야 합니다.
+> **Do NOT run `xcodebuild` from the terminal** — it invalidates TCC permissions and the app will need to re-request screen recording, accessibility, etc.
 
-### 필요한 권한
+### Permissions
 
-- **마이크** — 음성 입력용 (Flowcap 워크플로우 기능에는 불필요)
-- **접근성** — 전역 단축키 감지 (Ctrl+Option+R)
-- **화면 녹화** — 스크린샷 캡처
-- **화면 콘텐츠** — ScreenCaptureKit 접근
+- **Accessibility** — required for the global keyboard shortcut (Ctrl+Option+R)
+- **Screen Recording** — required for capturing screenshots
+- **Screen Content** — required for ScreenCaptureKit access
+- **Microphone** — only needed for Clicky's voice features, not for workflow recording
 
-## 기술 스택
+## Tech Stack
 
-- **SwiftUI + AppKit** — macOS 네이티브 메뉴바 앱
-- **Gemini 2.5 Flash** — 1M+ 토큰 컨텍스트로 대량 스크린샷 분석
-- **ScreenCaptureKit** — 멀티 모니터 스크린샷 캡처
-- **Cloudflare Worker** — API 키 프록시
-- **SSE Streaming** — 실시간 텍스트 생성
+- **SwiftUI + AppKit** — native macOS menu bar app
+- **Gemini 2.5 Flash** — 1M+ token context window for analyzing large screenshot sequences
+- **ScreenCaptureKit** — multi-monitor screenshot capture
+- **Cloudflare Worker** — API key proxy
+- **SSE Streaming** — real-time text generation
 
-## 기여
+## Contributing
 
-PR 환영합니다. 프로젝트 구조와 코드 컨벤션은 `CLAUDE.md`를 참고하세요.
+PRs welcome. See `CLAUDE.md` for project structure and code conventions.
 
-## 크레딧
+## Credits
 
-[Clicky](https://github.com/farzaa/clicky) by [Farza](https://x.com/farzatv) 위에 만들어졌습니다. MIT 라이선스.
+Built on top of [Clicky](https://github.com/farzaa/clicky) by [Farza](https://x.com/farzatv). MIT License.
