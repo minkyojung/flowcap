@@ -16,6 +16,8 @@ enum WorkflowOutputFormat: String, CaseIterable {
     case python = "Python"
     case json = "JSON"
     case applescript = "AppleScript"
+    case playwright = "Playwright"
+    case appleShortcuts = "Shortcuts"
 }
 
 @MainActor
@@ -195,6 +197,37 @@ final class WorkflowGenerator: ObservableObject {
             - include comments explaining each step
             - add appropriate `delay` commands between steps
             - include error handling with try blocks where interactions might fail
+            """
+
+        case .playwright:
+            return baseInstructions + """
+
+            output format: a Playwright test script in TypeScript that automates the recorded browser workflow.
+            - import { test, expect } from '@playwright/test'
+            - wrap the workflow in a test() block with a descriptive name
+            - use page.goto(), page.click(), page.fill(), page.getByRole(), page.getByText() etc.
+            - prefer accessible locators (getByRole, getByLabel, getByText) over CSS selectors
+            - add await expect() assertions after key steps to verify the workflow succeeded
+            - add appropriate await page.waitForLoadState() or waitForSelector() between navigation steps
+            - include comments explaining each step
+            - if the workflow involves non-browser desktop apps, add a comment noting those steps must be done manually
+            - output valid TypeScript only, no markdown code fences
+            """
+
+        case .appleShortcuts:
+            return baseInstructions + """
+
+            output format: a step-by-step Apple Shortcuts recipe described in a structured format that the user can manually recreate in the Shortcuts app on macOS/iOS.
+            - start with the shortcut name and a one-line description
+            - list each action as a numbered step with:
+              - the exact Shortcuts action name (e.g. "Open App", "Get Contents of URL", "Show Alert", "Set Variable", "If", "Repeat")
+              - the parameters to configure for that action
+              - a brief note explaining what this step does in the workflow
+            - group related actions under labeled sections
+            - use Shortcuts-native actions wherever possible: Open App, Open URL, Run Shell Script, Get Contents of URL, Show Alert, Ask for Input, Set Variable, If/Otherwise/End If, Repeat, Wait
+            - when a step requires interacting with a specific app's UI (clicking buttons, typing in fields), use "Run AppleScript" or "Run Shell Script" actions and include the script content
+            - at the end, list any required permissions or apps the shortcut needs
+            - output as clean structured text, not JSON or code
             """
         }
     }

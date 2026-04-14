@@ -81,7 +81,7 @@ struct CompanionPanelView: View {
                 Spacer()
                     .frame(height: 16)
 
-                dmFarzaButton
+                workflowShortcutHint
                     .padding(.horizontal, 16)
             }
 
@@ -111,7 +111,7 @@ struct CompanionPanelView: View {
                     .frame(width: 8, height: 8)
                     .shadow(color: statusDotColor.opacity(0.6), radius: 4)
 
-                Text("Clicky")
+                Text("Flowcap")
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundColor(DS.Colors.textPrimary)
             }
@@ -161,7 +161,7 @@ struct CompanionPanelView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         } else if companionManager.allPermissionsGranted {
-            Text("You're all set. Hit Start to meet Clicky.")
+            Text("You're all set. Press Ctrl+Option+R to start recording a workflow.")
                 .font(.system(size: 12, weight: .medium))
                 .foregroundColor(DS.Colors.textSecondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -172,7 +172,7 @@ struct CompanionPanelView: View {
                     .font(.system(size: 12, weight: .bold))
                     .foregroundColor(DS.Colors.textSecondary)
 
-                Text("Some permissions were revoked. Grant all four below to keep using Clicky.")
+                Text("Some permissions were revoked. Grant all four below to keep using Flowcap.")
                     .font(.system(size: 11))
                     .foregroundColor(DS.Colors.textTertiary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -180,16 +180,16 @@ struct CompanionPanelView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         } else {
             VStack(alignment: .leading, spacing: 6) {
-                Text("Hi, I'm Farza. This is Clicky.")
+                Text("Welcome to Flowcap")
                     .font(.system(size: 12, weight: .bold))
                     .foregroundColor(DS.Colors.textSecondary)
 
-                Text("A side project I made for fun to help me learn stuff as I use my computer.")
+                Text("Record your screen workflow, then let AI generate step-by-step documentation in multiple formats.")
                     .font(.system(size: 11))
                     .foregroundColor(DS.Colors.textTertiary)
                     .fixedSize(horizontal: false, vertical: true)
 
-                Text("Nothing runs in the background. Clicky will only take a screenshot when you press the hot key. So, you can give that permission in peace. If you are still sus, eh, I can't do much there champ.")
+                Text("Nothing runs in the background. Flowcap only takes screenshots while you're actively recording. Grant the permissions below to get started.")
                     .font(.system(size: 11))
                     .foregroundColor(Color(red: 0.9, green: 0.4, blue: 0.4))
                     .fixedSize(horizontal: false, vertical: true)
@@ -564,7 +564,7 @@ struct CompanionPanelView: View {
 
 
 
-    // MARK: - Show Clicky Cursor Toggle
+    // MARK: - Show Cursor Toggle
 
     private var showClickyCursorToggleRow: some View {
         HStack {
@@ -574,7 +574,7 @@ struct CompanionPanelView: View {
                     .foregroundColor(DS.Colors.textTertiary)
                     .frame(width: 16)
 
-                Text("Show Clicky")
+                Text("Show Cursor")
                     .font(.system(size: 13, weight: .medium))
                     .foregroundColor(DS.Colors.textSecondary)
             }
@@ -660,41 +660,33 @@ struct CompanionPanelView: View {
         .pointerCursor()
     }
 
-    // MARK: - DM Farza Button
+    // MARK: - Workflow Shortcut Hint
 
-    private var dmFarzaButton: some View {
-        Button(action: {
-            if let url = URL(string: "https://x.com/farzatv") {
-                NSWorkspace.shared.open(url)
-            }
-        }) {
-            HStack(spacing: 8) {
-                Image(systemName: "bubble.left.fill")
-                    .font(.system(size: 12, weight: .medium))
+    private var workflowShortcutHint: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "record.circle")
+                .font(.system(size: 12, weight: .medium))
 
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Got feedback? DM me")
-                        .font(.system(size: 12, weight: .semibold))
-                    Text("Bugs, ideas, anything — I read every message.")
-                        .font(.system(size: 10))
-                        .foregroundColor(DS.Colors.textTertiary)
-                }
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Ctrl+Option+R to record")
+                    .font(.system(size: 12, weight: .semibold))
+                Text("Press again to stop. AI generates your workflow automatically.")
+                    .font(.system(size: 10))
+                    .foregroundColor(DS.Colors.textTertiary)
             }
-            .foregroundColor(DS.Colors.textSecondary)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 10)
-            .background(
-                RoundedRectangle(cornerRadius: DS.CornerRadius.medium, style: .continuous)
-                    .fill(Color.white.opacity(0.06))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: DS.CornerRadius.medium, style: .continuous)
-                    .stroke(DS.Colors.borderSubtle, lineWidth: 0.5)
-            )
         }
-        .buttonStyle(.plain)
-        .pointerCursor()
+        .foregroundColor(DS.Colors.textSecondary)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(
+            RoundedRectangle(cornerRadius: DS.CornerRadius.medium, style: .continuous)
+                .fill(Color.white.opacity(0.06))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: DS.CornerRadius.medium, style: .continuous)
+                .stroke(DS.Colors.borderSubtle, lineWidth: 0.5)
+        )
     }
 
     // MARK: - Footer
@@ -707,7 +699,7 @@ struct CompanionPanelView: View {
                 HStack(spacing: 6) {
                     Image(systemName: "power")
                         .font(.system(size: 11, weight: .medium))
-                    Text("Quit Clicky")
+                    Text("Quit Flowcap")
                         .font(.system(size: 12, weight: .medium))
                 }
                 .foregroundColor(DS.Colors.textTertiary)
@@ -715,23 +707,7 @@ struct CompanionPanelView: View {
             .buttonStyle(.plain)
             .pointerCursor()
 
-            if companionManager.hasCompletedOnboarding {
-                Spacer()
-
-                Button(action: {
-                    companionManager.replayOnboarding()
-                }) {
-                    HStack(spacing: 6) {
-                        Image(systemName: "play.circle")
-                            .font(.system(size: 11, weight: .medium))
-                        Text("Watch Onboarding Again")
-                            .font(.system(size: 12, weight: .medium))
-                    }
-                    .foregroundColor(DS.Colors.textTertiary)
-                }
-                .buttonStyle(.plain)
-                .pointerCursor()
-            }
+            Spacer()
         }
     }
 
@@ -780,7 +756,7 @@ struct CompanionPanelView: View {
                     }
                 }
                 .pickerStyle(.menu)
-                .frame(width: 110)
+                .frame(width: 130)
                 .disabled(companionManager.workflowGenerator.isGenerating)
             }
 
