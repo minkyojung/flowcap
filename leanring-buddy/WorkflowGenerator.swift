@@ -8,6 +8,7 @@
 //  construction for different output formats.
 //
 
+import Combine
 import Foundation
 
 enum WorkflowOutputFormat: String, CaseIterable {

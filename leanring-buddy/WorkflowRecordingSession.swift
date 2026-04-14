@@ -7,6 +7,7 @@
 //  screenshots, and handed off for workflow generation when recording stops.
 //
 
+import Combine
 import Foundation
 
 struct WorkflowScreenshotFrame {
