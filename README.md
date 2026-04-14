@@ -4,8 +4,7 @@ A macOS menu bar app that records your screen and uses AI to generate workflow d
 
 Press Ctrl+Option+R, do your work as usual, and Flowcap captures screenshots every 4 seconds. When you stop, Gemini 2.5 Flash analyzes the sequence and generates a step-by-step workflow document.
 
-<!-- Add your demo video here by dragging it into the GitHub editor -->
-<!-- ![Flowcap Demo](demo.gif) -->
+https://github.com/user-attachments/assets/137b3ca2-aed9-4a2a-8a5a-bd9b637b6a47
 
 ## Output Formats
 
