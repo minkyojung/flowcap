@@ -12,10 +12,12 @@ class ClaudeAPI {
 
     private let apiURL: URL
     var model: String
+    private let authToken: String
     private let session: URLSession
 
-    init(proxyURL: String, model: String = "claude-sonnet-4-6") {
+    init(proxyURL: String, authToken: String = "", model: String = "claude-sonnet-4-6") {
         self.apiURL = URL(string: proxyURL)!
+        self.authToken = authToken
         self.model = model
 
         // Use .default instead of .ephemeral so TLS session tickets are cached.
@@ -41,6 +43,9 @@ class ClaudeAPI {
         request.httpMethod = "POST"
         request.timeoutInterval = 120
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        if !authToken.isEmpty {
+            request.setValue(authToken, forHTTPHeaderField: "X-App-Token")
+        }
         return request
     }
 

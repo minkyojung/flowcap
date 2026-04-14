@@ -59,16 +59,20 @@ final class CompanionManager: ObservableObject {
     /// through this so keys never ship in the app binary.
     private static let workerBaseURL = "https://clicky-proxy.flowcap.workers.dev"
 
+    /// Auth token sent to the Worker in the X-App-Token header. Must match
+    /// the APP_AUTH_TOKEN secret configured in the Cloudflare Worker.
+    private static let workerAuthToken = AppBundleConfiguration.stringValue(forKey: "WorkerAuthToken") ?? ""
+
     private lazy var claudeAPI: ClaudeAPI = {
-        return ClaudeAPI(proxyURL: "\(Self.workerBaseURL)/chat", model: selectedModel)
+        return ClaudeAPI(proxyURL: "\(Self.workerBaseURL)/chat", authToken: Self.workerAuthToken, model: selectedModel)
     }()
 
     private(set) lazy var geminiWorkflowAPI: GeminiWorkflowAPI = {
-        return GeminiWorkflowAPI(proxyURL: "\(Self.workerBaseURL)/workflow")
+        return GeminiWorkflowAPI(proxyURL: "\(Self.workerBaseURL)/workflow", authToken: Self.workerAuthToken)
     }()
 
     private lazy var elevenLabsTTSClient: ElevenLabsTTSClient = {
-        return ElevenLabsTTSClient(proxyURL: "\(Self.workerBaseURL)/tts")
+        return ElevenLabsTTSClient(proxyURL: "\(Self.workerBaseURL)/tts", authToken: Self.workerAuthToken)
     }()
 
     /// Conversation history so Claude remembers prior exchanges within a session.
@@ -136,32 +140,6 @@ final class CompanionManager: ObservableObject {
     var hasCompletedOnboarding: Bool {
         get { UserDefaults.standard.bool(forKey: "hasCompletedOnboarding") }
         set { UserDefaults.standard.set(newValue, forKey: "hasCompletedOnboarding") }
-    }
-
-    /// Whether the user has submitted their email during onboarding.
-    @Published var hasSubmittedEmail: Bool = UserDefaults.standard.bool(forKey: "hasSubmittedEmail")
-
-    /// Submits the user's email to FormSpark and identifies them in PostHog.
-    func submitEmail(_ email: String) {
-        let trimmedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmedEmail.isEmpty else { return }
-
-        hasSubmittedEmail = true
-        UserDefaults.standard.set(true, forKey: "hasSubmittedEmail")
-
-        // Identify user in PostHog
-        PostHogSDK.shared.identify(trimmedEmail, userProperties: [
-            "email": trimmedEmail
-        ])
-
-        // Submit to FormSpark
-        Task {
-            var request = URLRequest(url: URL(string: "https://submit-form.com/RWbGJxmIs")!)
-            request.httpMethod = "POST"
-            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-            request.httpBody = try? JSONSerialization.data(withJSONObject: ["email": trimmedEmail])
-            _ = try? await URLSession.shared.data(for: request)
-        }
     }
 
     func start() {

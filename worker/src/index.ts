@@ -15,6 +15,7 @@ interface Env {
   ELEVENLABS_VOICE_ID: string;
   ASSEMBLYAI_API_KEY: string;
   GEMINI_API_KEY: string;
+  APP_AUTH_TOKEN: string;
 }
 
 export default {
@@ -23,6 +24,12 @@ export default {
 
     if (request.method !== "POST") {
       return new Response("Method not allowed", { status: 405 });
+    }
+
+    // Verify the request comes from the Flowcap app
+    const appToken = request.headers.get("X-App-Token");
+    if (!env.APP_AUTH_TOKEN || appToken !== env.APP_AUTH_TOKEN) {
+      return new Response("Unauthorized", { status: 401 });
     }
 
     try {

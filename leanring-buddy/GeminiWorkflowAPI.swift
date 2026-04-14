@@ -13,10 +13,12 @@ import Foundation
 
 class GeminiWorkflowAPI {
     private let proxyURL: URL
+    private let authToken: String
     private let session: URLSession
 
-    init(proxyURL: String) {
+    init(proxyURL: String, authToken: String = "") {
         self.proxyURL = URL(string: proxyURL)!
+        self.authToken = authToken
 
         let config = URLSessionConfiguration.default
         config.timeoutIntervalForRequest = 180
@@ -42,6 +44,9 @@ class GeminiWorkflowAPI {
         request.httpMethod = "POST"
         request.timeoutInterval = 180
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        if !authToken.isEmpty {
+            request.setValue(authToken, forHTTPHeaderField: "X-App-Token")
+        }
 
         // Build Gemini request body
         // Format: { contents: [{ parts: [...] }], systemInstruction: {...}, generationConfig: {...} }
