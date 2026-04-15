@@ -14,6 +14,8 @@ interface Env {
   ELEVENLABS_API_KEY: string;
   ELEVENLABS_VOICE_ID: string;
   ASSEMBLYAI_API_KEY: string;
+  GEMINI_API_KEY: string;
+  APP_AUTH_TOKEN: string;
 }
 
 export default {
@@ -22,6 +24,12 @@ export default {
 
     if (request.method !== "POST") {
       return new Response("Method not allowed", { status: 405 });
+    }
+
+    // Verify the request comes from the Flowcap app
+    const appToken = request.headers.get("X-App-Token");
+    if (!env.APP_AUTH_TOKEN || appToken !== env.APP_AUTH_TOKEN) {
+      return new Response("Unauthorized", { status: 401 });
     }
 
     try {
@@ -35,6 +43,10 @@ export default {
 
       if (url.pathname === "/transcribe-token") {
         return await handleTranscribeToken(env);
+      }
+
+      if (url.pathname === "/workflow") {
+        return await handleWorkflow(request, env);
       }
     } catch (error) {
       console.error(`[${url.pathname}] Unhandled error:`, error);
@@ -103,6 +115,38 @@ async function handleTranscribeToken(env: Env): Promise<Response> {
   return new Response(data, {
     status: 200,
     headers: { "content-type": "application/json" },
+  });
+}
+
+async function handleWorkflow(request: Request, env: Env): Promise<Response> {
+  const body = await request.text();
+
+  const model = "gemini-2.5-flash";
+  const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse&key=${env.GEMINI_API_KEY}`;
+
+  const response = await fetch(apiUrl, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+    },
+    body,
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.text();
+    console.error(`[/workflow] Gemini API error ${response.status}: ${errorBody}`);
+    return new Response(errorBody, {
+      status: response.status,
+      headers: { "content-type": "application/json" },
+    });
+  }
+
+  return new Response(response.body, {
+    status: response.status,
+    headers: {
+      "content-type": "text/event-stream",
+      "cache-control": "no-cache",
+    },
   });
 }
 

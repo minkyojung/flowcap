@@ -48,7 +48,7 @@ enum ClickyAnalytics {
         PostHogSDK.shared.capture("onboarding_video_completed")
     }
 
-    /// The 40s onboarding demo interaction where Clicky points at something.
+    /// Onboarding demo interaction (deprecated — video onboarding removed).
     static func trackOnboardingDemoTriggered() {
         PostHogSDK.shared.capture("onboarding_demo_triggered")
     }

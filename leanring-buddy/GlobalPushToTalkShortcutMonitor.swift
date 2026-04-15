@@ -15,6 +15,11 @@ import Foundation
 final class GlobalPushToTalkShortcutMonitor: ObservableObject {
     let shortcutTransitionPublisher = PassthroughSubject<BuddyPushToTalkShortcut.ShortcutTransition, Never>()
 
+    /// Fires once each time the user presses the workflow recording toggle
+    /// shortcut (Cmd+Shift+R). CompanionManager listens and starts/stops
+    /// a WorkflowRecordingSession accordingly.
+    let workflowRecordingTogglePublisher = PassthroughSubject<Void, Never>()
+
     private var globalEventTap: CFMachPort?
     private var globalEventTapRunLoopSource: CFRunLoopSource?
     /// Mutated exclusively from the CGEvent tap callback, which runs on
@@ -22,6 +27,10 @@ final class GlobalPushToTalkShortcutMonitor: ObservableObject {
     /// Published so the overlay can hide immediately on key release without
     /// waiting for the async dictation state pipeline to catch up.
     @Published private(set) var isShortcutCurrentlyPressed = false
+
+    // Ctrl+Option+R key code (R = 15 on macOS virtual key table)
+    private static let workflowRecordingKeyCode: UInt16 = 15
+    private static let workflowRecordingModifierFlags: NSEvent.ModifierFlags = [.control, .option]
 
     deinit {
         stop()
@@ -109,6 +118,17 @@ final class GlobalPushToTalkShortcutMonitor: ObservableObject {
         }
 
         let eventKeyCode = UInt16(event.getIntegerValueField(.keyboardEventKeycode))
+
+        // Detect workflow recording toggle (Cmd+Shift+R) on keyDown only
+        if eventType == .keyDown && eventKeyCode == Self.workflowRecordingKeyCode {
+            let modifierFlags = NSEvent.ModifierFlags(rawValue: UInt(event.flags.rawValue))
+                .intersection(.deviceIndependentFlagsMask)
+            if modifierFlags.contains(Self.workflowRecordingModifierFlags) {
+                workflowRecordingTogglePublisher.send()
+                return Unmanaged.passUnretained(event)
+            }
+        }
+
         let shortcutTransition = BuddyPushToTalkShortcut.shortcutTransition(
             for: eventType,
             keyCode: eventKeyCode,

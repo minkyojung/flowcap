@@ -13,14 +13,16 @@ import Foundation
 @MainActor
 final class ElevenLabsTTSClient {
     private let proxyURL: URL
+    private let authToken: String
     private let session: URLSession
 
     /// The audio player for the current TTS playback. Kept alive so the
     /// audio finishes playing even if the caller doesn't hold a reference.
     private var audioPlayer: AVAudioPlayer?
 
-    init(proxyURL: String) {
+    init(proxyURL: String, authToken: String = "") {
         self.proxyURL = URL(string: proxyURL)!
+        self.authToken = authToken
 
         let configuration = URLSessionConfiguration.default
         configuration.timeoutIntervalForRequest = 30
@@ -35,6 +37,9 @@ final class ElevenLabsTTSClient {
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("audio/mpeg", forHTTPHeaderField: "Accept")
+        if !authToken.isEmpty {
+            request.setValue(authToken, forHTTPHeaderField: "X-App-Token")
+        }
 
         let body: [String: Any] = [
             "text": text,
