@@ -51,11 +51,14 @@ cd worker
 npm install
 ```
 
-Add your API keys as secrets:
+Add your API keys and auth token as secrets:
 
 ```bash
 # Required for Flowcap workflow generation
 npx wrangler secret put GEMINI_API_KEY
+
+# Auth token — pick any random string. The app must send the same token.
+npx wrangler secret put APP_AUTH_TOKEN
 
 # Optional — for Clicky's original voice/chat features
 npx wrangler secret put ANTHROPIC_API_KEY
@@ -73,15 +76,22 @@ Copy the URL it gives you (e.g. `https://your-worker.your-subdomain.workers.dev`
 
 ### 2. Update the Proxy URL
 
-The app has the Worker URL hardcoded. Replace it with your own:
+The app has the Worker URL hardcoded in two files. Replace it with your own Worker URL:
 
-```bash
-grep -r "clicky-proxy" leanring-buddy/
-```
+- `leanring-buddy/CompanionManager.swift` — look for `workerBaseURL`
+- `leanring-buddy/AssemblyAIStreamingTranscriptionProvider.swift` — look for `tokenProxyURL`
 
-You'll find it in `CompanionManager.swift` and `AssemblyAIStreamingTranscriptionProvider.swift`.
+### 3. Set the Auth Token in Xcode
 
-### 3. Build in Xcode
+The app reads `WORKER_AUTH_TOKEN` from a build setting and sends it to the Worker in every request. This must match the `APP_AUTH_TOKEN` you set in step 1.
+
+In Xcode:
+1. Select the project (not the target) → **Build Settings** tab
+2. Click **+** → **Add User-Defined Setting**
+3. Name: `WORKER_AUTH_TOKEN`
+4. Value: the same token you used for `APP_AUTH_TOKEN`
+
+### 4. Build and Run
 
 ```bash
 open leanring-buddy.xcodeproj
